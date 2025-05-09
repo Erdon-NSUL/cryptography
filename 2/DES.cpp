@@ -44,7 +44,7 @@ int etable[48] = { 31, 0, 1, 2, 3, 4,
 27,28,29,30,31, 0 };
 
 //置换函数P
-int P_Table[32] = { 15,6,19,20,28,11,27,16,
+int ptable[32] = { 15,6,19,20,28,11,27,16,
 0,14,22,25,4,17,30,9,
 1,7,23,13,31,26,2,8,
 18,12,29,5,21,10,3,24 };
@@ -110,6 +110,16 @@ int sbox[8][4][16] =
 }
 };
 
+//逆初始置换表IP^-1
+int iptable_r[64] = { 39,7,47,15,55,23,63,31,
+38,6,46,14,54,22,62,30,
+37,5,45,13,53,21,61,29,
+36,4,44,12,52,20,60,28,
+35,3,43,11,51,19,59,27,
+34,2,42,10,50,18,58,26,
+33,1,41,9,49,17,57,25,
+32,0,40,8,48,16,56,24 };
+
 
 bool check(string s, int bit){
 	if(s.length() != bit){
@@ -120,6 +130,11 @@ bool check(string s, int bit){
 
 string xor_operation(string x,string y,int bit){
 	string r = "";
+	for(int i = 0;i<bit;++i){
+		if(x[i] == y[i]){
+			r += '0';
+		}else r += '1';
+	}
 	return r;
 }
 
@@ -154,8 +169,6 @@ string compress_replacement(string key56,int *Ppc2){
 		return key48;
 }
 
-
-
 //以下函数是对明文的处理
 vector<string> ori_M64_RS(string M64, int *Piptable){
 	string l = "",r = "";
@@ -174,8 +187,45 @@ vector<string> ori_M64_RS(string M64, int *Piptable){
 	return group;
 }
 
-void round_operation(int round,string key64,string ip_M64_l,string ip_M64_r){
-	string l = ip_M64_l,r = ip_M64_r;
+string expand_replacement(string r32, int *Petable){
+	string r48 = "";
+	for(int i = 0;i<48;++i){
+		r48 += r32[*(Petable+i)];
+	}
+	return r48;
+}
+
+void p_replacement(string &r32,int*Pptable){
+	string rr32 = "";
+	for(int i = 0;i<32;++i){
+		rr32 += r32[*(Pptable+i)];
+	}
+	r32 = rr32;
+}
+
+string sbox_operation(string r48,int (*Psbox)[4][16]){
+	string r32 = "";
+	int row = 0,col = 0;
+	for(int i = 0;i<8;++i){
+		row = 2*(int(r48[i*6])-48)+(int(r48[i*6+5]-48));
+		col = 8*(int(r48[i*6+1])-48)+4*(int(r48[i*6+2])-48)+2*(int(r48[i*6+3])-48)+(int(r48[i*6+4]))-48;
+		
+		string s4 = bitset<4>(Psbox[i][row][col]).to_string();
+		r32+=s4;
+	}
+	return r32;
+}
+
+string reverse_replacement(vector<string>group,int *iptable_r ){
+	string m64 = group[0]+group[1],c64="";
+	for(int i =0;i<64;++i){
+		c64 += m64[*(iptable_r+i)];
+	}
+	return c64;
+}
+
+void round_operation(int round,string key64,vector<string> &group){
+	string l = group[0],r = group[1];
 	string key56 = replace_selection(key64,pc1);
 
 	for(int i = 0;i<round;++i){
@@ -185,29 +235,16 @@ void round_operation(int round,string key64,string ip_M64_l,string ip_M64_r){
 
 		string _r = expand_replacement(r,etable);
 		_r = xor_operation(_r,subkey48,48);
-		//从这里接着写
-		r = xor_operation(l,r,32);
+		_r = sbox_operation(_r,sbox);
+		p_replacement(_r,ptable);
+		_r = xor_operation(l,_r,32);
 		l = r;
+		r = _r;
 	}
+
+	group[0] = r;
+	group[1] = l;
 }
-
-string expand_replacement(string r32, int *Petable){
-	string rr32 = "";
-	for(int i = 0;i<48;++i){
-		rr32 += r32[*(Petable+i)];
-	}
-	return rr32;
-}
-
-void p_replacement(string qwq){
-	
-}
-
-void sbox_operation(){
-	
-}
-
-
 
 int main(){
 	cout << "start!"<<endl;
@@ -222,12 +259,14 @@ int main(){
 		cout<<"Error:输入不合法!"<<endl;
 	}
 	
-	//测试区
+	//加密过程
+	vector<string>ciallo = ori_M64_RS(M64,iptable);
+	round_operation(16,key64,ciallo);
+	string C64 = reverse_replacement(ciallo,iptable_r);
+	cout << C64;
 	
-	
-	
-	
-	
+	//解密过程
+
 	
 	
 	

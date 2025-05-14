@@ -147,7 +147,7 @@ string replace_selection(string key64, int* Ppc1){
 	return key56;
 }
 
-void rotate_left(string &key56){
+void rotate_left_1(string &key56){
 	string l = "";
 	for(int i = 1;i<28;++i){
 		l += key56[i];
@@ -157,6 +157,22 @@ void rotate_left(string &key56){
 			l += key56[i];
 		}
 	l+=key56[28];
+	
+	key56 = l;
+}
+
+void rotate_left_2(string &key56){
+	string l = "";
+	for(int i = 2;i<28;++i){
+		l += key56[i];
+	}
+	l+=key56[0];
+	l+=key56[1];
+	for(int i = 30;i<56;++i){
+			l += key56[i];
+		}
+	l+=key56[28];
+	l+=key56[29];
 	
 	key56 = l;
 }
@@ -224,14 +240,19 @@ string reverse_replacement(vector<string>group,int *iptable_r ){
 	return c64;
 }
 
-void round_operation(int round,string key64,vector<string> &group){
+void round_operation(int round,string key64,vector<string> &group,deque<string> &subkeys){
 	string l = group[0],r = group[1];
 	string key56 = replace_selection(key64,pc1);
 
 	for(int i = 0;i<round;++i){
 		//得到此轮subkey
-		rotate_left(key56);
+		if(i == 0||i == 1||i == 8||i==15){
+			rotate_left_1(key56);
+		}else rotate_left_2(key56);
+		
+		
 		string subkey48 = compress_replacement(key56,pc2);
+		subkeys.push_front(subkey48);
 
 		string _r = expand_replacement(r,etable);
 		_r = xor_operation(_r,subkey48,48);
@@ -246,11 +267,38 @@ void round_operation(int round,string key64,vector<string> &group){
 	group[1] = l;
 }
 
-string DES_encryption(string M64,int *iptable,int *iptable_r){
+void de_round_operation(int round,string key64,vector<string> &group,deque<string> subkeys){
+	string l = group[0],r = group[1];
+
+	for(int i = 0;i<round;++i){
+		//得到此轮subkey
+		string subkey48 = subkeys[i];
+
+		string _r = expand_replacement(r,etable);
+		_r = xor_operation(_r,subkey48,48);
+		_r = sbox_operation(_r,sbox);
+		p_replacement(_r,ptable);
+		_r = xor_operation(l,_r,32);
+		l = r;
+		r = _r;
+	}
+
+	group[0] = r;
+	group[1] = l;
+}
+
+string DES_encryption(string M64,int *iptable,int *iptable_r,deque<string> &subkeys){
 	vector<string>ciallo = ori_M64_RS(M64,iptable);
-	round_operation(16,key64,ciallo);
+	round_operation(16,key64,ciallo,subkeys);
 	return reverse_replacement(ciallo,iptable_r);
 }
+
+string DES_decryption(string M64,int *iptable,int *iptable_r,deque<string> subkeys){
+	vector<string>ciallo = ori_M64_RS(M64,iptable);
+	de_round_operation(16,key64,ciallo,subkeys);
+	return reverse_replacement(ciallo,iptable_r);
+}
+
 int main(){
 	cout << "start!"<<endl;
 	//输入明文M与密钥key
@@ -258,23 +306,23 @@ int main(){
 //	cin >> M64 >> key64;
 
 	
-	//验证输入合法性
+	/*验证输入合法性
 	if(!check(M64,64) || !check(key64,64)){
 		cout <<M64.length() <<","<<key64.length()<<endl;
 		cout<<"Error:输入不合法!"<<endl;
-	}
+	}*/
 	
 	//加密过程
-	string C64 = DES_encryption(M64,iptable,iptable_r);
-	cout <<"密文为："<< DES_encryption(M64,iptable,iptable_r)<<","<<C64.length()<<endl;
-	
-	//解密过程
+	deque<string> subkeys;
+	string C64 = DES_encryption(M64,iptable,iptable_r,subkeys);
+	cout <<"密文为："<< C64 <<","<<C64.length()<<endl;
 	
 
-	
-	
-	
-	
-	
+	//解密过程
+	string dC64 = DES_decryption(C64,iptable,iptable_r,subkeys);
+	cout <<"解密后明文为："<< dC64 <<","<< dC64.length()<<endl;
+
+
+
 	return 0;
 }

@@ -1,11 +1,11 @@
 #include<bits/stdc++.h>
 using namespace std;
 
-//å£°æ˜
+//ÉùÃ÷
 string key64 = "0001001100110100010101110111001100110111011110011011111111100010";
 string M64 = "1011101111000101000101011111101100101101111000100110011011011100";
 
-//ç½®æ¢é€‰æ‹©1
+//ÖÃ»»Ñ¡Ôñ1
 int pc1[56] = {56,48,40,32,24,16,8,
 0,57,49,41,33,25,17,
 9,1,58,50,42,34,26,
@@ -15,7 +15,7 @@ int pc1[56] = {56,48,40,32,24,16,8,
 13,5,60,52,44,36,28,
 20,12,4,27,19,11,3};
 
-//ç½®æ¢é€‰æ‹©2
+//ÖÃ»»Ñ¡Ôñ2
 int pc2[48] = {13,16,10,23,0,4,2,27,
 14,5,20,9,22,18,11,3,
 25,7,15,6,26,19,12,1,
@@ -23,7 +23,7 @@ int pc2[48] = {13,16,10,23,0,4,2,27,
 50,44,32,46,43,48,38,55,
 33,52,45,41,49,35,28,31 };
 
-//åˆå§‹ç½®æ¢è¡¨IP
+//³õÊ¼ÖÃ»»±íIP
 int iptable[64] = { 57,49,41,33,25,17,9,1,
 59,51,43,35,27,19,11,3,
 61,53,45,37,29,21,13,5,
@@ -33,7 +33,7 @@ int iptable[64] = { 57,49,41,33,25,17,9,1,
 60,52,44,36,28,20,12,4,
 62,54,46,38,30,22,14,6 };
 
-//æ‰©å±•å˜æ¢è¡¨E
+//À©Õ¹±ä»»±íE
 int etable[48] = { 31, 0, 1, 2, 3, 4,
 3, 4, 5, 6, 7, 8,
 7, 8,9,10,11,12,
@@ -43,13 +43,13 @@ int etable[48] = { 31, 0, 1, 2, 3, 4,
 23,24,25,26,27,28,
 27,28,29,30,31, 0 };
 
-//ç½®æ¢å‡½æ•°P
+//ÖÃ»»º¯ÊıP
 int ptable[32] = { 15,6,19,20,28,11,27,16,
 0,14,22,25,4,17,30,9,
 1,7,23,13,31,26,2,8,
 18,12,29,5,21,10,3,24 };
 
-/*========================Sç›’=================================*/
+/*========================SºĞ=================================*/
 int sbox[8][4][16] =
 {
 //S1
@@ -110,7 +110,7 @@ int sbox[8][4][16] =
 }
 };
 
-//é€†åˆå§‹ç½®æ¢è¡¨IP^-1
+//Äæ³õÊ¼ÖÃ»»±íIP^-1
 int iptable_r[64] = { 39,7,47,15,55,23,63,31,
 38,6,46,14,54,22,62,30,
 37,5,45,13,53,21,61,29,
@@ -138,7 +138,7 @@ string xor_operation(string x,string y,int bit){
 	return r;
 }
 
-//ä»¥ä¸‹ä¸‰ä¸ªå‡½æ•°æ˜¯å¯¹å¯†é’¥çš„å¤„ç†
+//ÒÔÏÂÈı¸öº¯ÊıÊÇ¶ÔÃÜÔ¿µÄ´¦Àí
 string replace_selection(string key64, int* Ppc1){
 	string key56 = "";
 	for(int i = 0;i<56;++i){
@@ -169,7 +169,7 @@ string compress_replacement(string key56,int *Ppc2){
 		return key48;
 }
 
-//ä»¥ä¸‹å‡½æ•°æ˜¯å¯¹æ˜æ–‡çš„å¤„ç†
+//ÒÔÏÂº¯ÊıÊÇ¶ÔÃ÷ÎÄµÄ´¦Àí
 vector<string> ori_M64_RS(string M64, int *Piptable){
 	string l = "",r = "";
 	vector<string>group;
@@ -229,7 +229,7 @@ void round_operation(int round,string key64,vector<string> &group){
 	string key56 = replace_selection(key64,pc1);
 
 	for(int i = 0;i<round;++i){
-		//å¾—åˆ°æ­¤è½®subkey
+		//µÃµ½´ËÂÖsubkey
 		rotate_left(key56);
 		string subkey48 = compress_replacement(key56,pc2);
 
@@ -246,26 +246,30 @@ void round_operation(int round,string key64,vector<string> &group){
 	group[1] = l;
 }
 
+string DES_encryption(string M64,int *iptable,int *iptable_r){
+	vector<string>ciallo = ori_M64_RS(M64,iptable);
+	round_operation(16,key64,ciallo);
+	return reverse_replacement(ciallo,iptable_r);
+}
 int main(){
 	cout << "start!"<<endl;
-	//è¾“å…¥æ˜æ–‡Mä¸å¯†é’¥key
-//	cout <<"è¾“å…¥æ˜æ–‡Mä¸å¯†é’¥key:"<<endl;
+	//ÊäÈëÃ÷ÎÄMÓëÃÜÔ¿key
+//	cout <<"ÊäÈëÃ÷ÎÄMÓëÃÜÔ¿key:"<<endl;
 //	cin >> M64 >> key64;
 
 	
-	//éªŒè¯è¾“å…¥åˆæ³•æ€§
+	//ÑéÖ¤ÊäÈëºÏ·¨ĞÔ
 	if(!check(M64,64) || !check(key64,64)){
 		cout <<M64.length() <<","<<key64.length()<<endl;
-		cout<<"Error:è¾“å…¥ä¸åˆæ³•!"<<endl;
+		cout<<"Error:ÊäÈë²»ºÏ·¨!"<<endl;
 	}
 	
-	//åŠ å¯†è¿‡ç¨‹
-	vector<string>ciallo = ori_M64_RS(M64,iptable);
-	round_operation(16,key64,ciallo);
-	string C64 = reverse_replacement(ciallo,iptable_r);
-	cout << C64;
+	//¼ÓÃÜ¹ı³Ì
+	string C64 = DES_encryption(M64,iptable,iptable_r);
+	cout <<"ÃÜÎÄÎª£º"<< DES_encryption(M64,iptable,iptable_r)<<","<<C64.length()<<endl;
 	
-	//è§£å¯†è¿‡ç¨‹
+	//½âÃÜ¹ı³Ì
+	
 
 	
 	

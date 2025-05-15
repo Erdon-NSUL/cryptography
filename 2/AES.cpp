@@ -78,9 +78,21 @@ int colmix_matrix[16] = {
     0x01, 0x01, 0x02, 0x03,
     0x03, 0x01, 0x01, 0x02
 };
+int inv_colmix_matrix[16] = {
+	0x0E, 0x09, 0x0D, 0x0B,
+    0x0B, 0x0E, 0x09, 0x0D,
+    0x0D, 0x0B, 0x0E, 0x09,
+    0x09, 0x0D, 0x0B, 0x0E
+};
 
 //对单个16进制2位数进行s盒代换
 int byte_replacement(int hex_2_byte){
+	int aa = (hex_2_byte >> 4) & 0xff;
+	int bb = hex_2_byte-aa*16;
+	return IS[aa*16+bb];
+}
+
+int inv_byte_replacement(int hex_2_byte){
 	int aa = (hex_2_byte >> 4) & 0xff;
 	int bb = hex_2_byte-aa*16;
 	return S_box[aa*16+bb];
@@ -141,6 +153,23 @@ void col_shift(vector<col> &matrix4x4){
 		}
     }
 }
+void inv_col_shift(vector<col> &matrix4x4){
+	int shifts[4] = {3,2,1,0};
+	
+	for (int i = 1; i < 4; ++i) {
+        int shift = shifts[i];
+		col tmp = {};
+		for(int j = 0;j<4;++j){
+			tmp.push_back(matrix4x4[j][i]);
+		}
+
+		rotate(tmp.begin(),tmp.begin()+shift,tmp.end());
+
+		for(int j = 0;j<4;++j){
+			matrix4x4[j][i] = tmp[j];
+		}
+    }
+}
 //GF(2^8)模乘运算！！！
 int gf28_multiply(int a, int b) {
     int result = 0;
@@ -164,7 +193,22 @@ vector<col> row_mix(vector<col> matrix4x4){
 		for(int j = 0;j<4;++j){
 			int ciallo = 0;
 			for(int k=0;k<4;++k){
-				ciallo ^= gf28_multiply(matrix4x4[i][k],colmix_matrix[j*4+k]);
+				ciallo ^= gf28_multiply(matrix4x4[j][k],colmix_matrix[i*4+k]);
+			}
+			rmatrix4x4[i][j] = ciallo;
+		}
+		
+	}
+	return rmatrix4x4;
+}
+
+vector<col> inv_row_mix(vector<col> matrix4x4){
+	vector<col> rmatrix4x4 = matrix4x4;
+	for(int i=0;i<4;++i){
+		for(int j = 0;j<4;++j){
+			int ciallo = 0;
+			for(int k=0;k<4;++k){
+				ciallo ^= gf28_multiply(matrix4x4[j][k],inv_colmix_matrix[i*4+k]);
 			}
 			rmatrix4x4[i][j] = ciallo;
 		}
@@ -215,7 +259,49 @@ vector<col> AES_Encrypt(vector<col>M16,vector<col>KEY_expand){
 
 	return state;
 }
+vector<col> AES_Decrypt(vector<col>C16,vector<col>KEY_expand){
+	vector<col>state = C16;
+	//最后一个轮密钥异或
+	for(int i = 0;i<M16.size();++i){
+		for (int j = 0;j<M16.size();++j){
+			state[i][j] ^= KEY_expand[40+i][j];
+		}
+	}
+	//轮操作
+	for(int cnt = 1;cnt<=9;++cnt){
+		//行移位求逆（实际在这段代码中是列移位）
+		inv_col_shift(state);
+		//字节替换求逆
+		for(int i = 0;i<4;++i){
+			for (int j = 0;j<4;++j){
+				state[i][j] = inv_byte_replacement(state[i][j]);
+			}
+		}
+		//轮密钥加
+		for(int i = 0;i<4;++i){
+			for (int j = 0;j<4;++j){
+				state[i][j] ^= KEY_expand[(10-cnt)*4+i][j];
+			}
+		}
+		//列混淆求逆（实际为行混淆）
+		state = inv_row_mix(state);
+				
+	}
+	//最后一轮
+	inv_col_shift(state);
+	for(int i = 0;i<M16.size();++i){
+		for (int j = 0;j<M16.size();++j){
+			state[i][j] = inv_byte_replacement(state[i][j]);
+		}
+	}
+	for(int i = 0;i<4;++i){
+		for (int j = 0;j<4;++j){
+			state[i][j] ^= KEY_expand[i][j];
+		}
+	}
 
+	return state;
+}
 int main() {
 	vector<col> key176 = expand_orikey16(ORIKEY16,10);
     vector<col> C16 = AES_Encrypt(M16,key176);
@@ -226,6 +312,13 @@ int main() {
 		}
 		cout << endl;
 	}
-
+	vector<col> MM16 = AES_Decrypt(C16,key176);
+	cout << "解密后明文矩阵为："<<endl;
+	for(auto i :MM16){
+		for(auto j:i){
+			cout << "0x" << hex << setw(2) << setfill('0') << j << " ";
+		}
+		cout << endl;
+	}
     return 0;
 }

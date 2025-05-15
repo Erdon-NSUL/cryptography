@@ -141,7 +141,7 @@ void col_shift(vector<col> &matrix4x4){
 		}
     }
 }
-//GF(2^8)模乘运算
+//GF(2^8)模乘运算！！！
 int gf28_multiply(int a, int b) {
     int result = 0;
     for (int i = 0; i < 8; ++i) {
@@ -158,33 +158,69 @@ int gf28_multiply(int a, int b) {
     return result;
 }
 //列（行）混淆
-void row_mix(vector<col> matrix4x4){
+vector<col> row_mix(vector<col> matrix4x4){
+	vector<col> rmatrix4x4 = matrix4x4;
 	for(int i=0;i<4;++i){
-		int tmp = 0;
 		for(int j = 0;j<4;++j){
-			tmp += colmix_matrix[i*4+j]*(matrix4x4[j][i]);
+			int ciallo = 0;
+			for(int k=0;k<4;++k){
+				ciallo ^= gf28_multiply(matrix4x4[i][k],colmix_matrix[j*4+k]);
+			}
+			rmatrix4x4[i][j] = ciallo;
 		}
+		
 	}
+	return rmatrix4x4;
 }
 
-void AES_Encrypt(vector<col>M16,vector<col>KEY_expand){
+vector<col> AES_Encrypt(vector<col>M16,vector<col>KEY_expand){
 	vector<col>state = M16;
-	//1. 种子密钥异或&字节替换
+	//种子密钥异或
 	for(int i = 0;i<M16.size();++i){
 		for (int j = 0;j<M16.size();++j){
 			state[i][j] ^= KEY_expand[i][j];
+		}
+	}
+	//轮操作
+	for(int cnt = 1;cnt<=9;++cnt){
+		//字节替换
+		for(int i = 0;i<M16.size();++i){
+			for (int j = 0;j<M16.size();++j){
+				state[i][j] = byte_replacement(state[i][j]);
+			}
+		}
+		//行移位（实际在这段代码中是列移位）
+		col_shift(state);
+		//列混淆（实际为行混淆）
+		state = row_mix(state);
+		//轮密钥加
+		for(int i = 0;i<4;++i){
+			for (int j = 0;j<4;++j){
+				state[i][j] ^= KEY_expand[cnt*4+i][j];
+			}
+		}		
+	}
+	//最后一轮
+	for(int i = 0;i<M16.size();++i){
+		for (int j = 0;j<M16.size();++j){
 			state[i][j] = byte_replacement(state[i][j]);
 		}
 	}
-	//2. 行移位（实际在这段代码中是列移位）
 	col_shift(state);
-	
+	for(int i = 0;i<4;++i){
+		for (int j = 0;j<4;++j){
+			state[i][j] ^= KEY_expand[40+i][j];
+		}
+	}
+
+	return state;
 }
 
 int main() {
 	vector<col> key176 = expand_orikey16(ORIKEY16,10);
-    AES_Encrypt(M16,key176);
-	for(auto i :M16){
+    vector<col> C16 = AES_Encrypt(M16,key176);
+	cout << "加密后密文矩阵为："<<endl;
+	for(auto i :C16){
 		for(auto j:i){
 			cout << hex << j <<" ";
 		}

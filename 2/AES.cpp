@@ -222,7 +222,7 @@ int main() {
 	cout << "加密后密文矩阵为："<<endl;
 	for(auto i :C16){
 		for(auto j:i){
-			cout << hex << j <<" ";
+			cout << "0x" << hex << setw(2) << setfill('0') << j << " ";
 		}
 		cout << endl;
 	}
